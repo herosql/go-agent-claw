@@ -7,6 +7,7 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
+	github.com/larksuite/oapi-sdk-go/v3 v3.7.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/openai/openai-go/v3 v3.35.0 // indirect
 	github.com/standard-webhooks/standard-webhooks/libraries v0.0.0-20260508151727-1282bb917829 // indirect
