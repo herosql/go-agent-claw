@@ -7,6 +7,7 @@ import (
 	"log"
 	"sync"
 
+	ctxpkg "github.com/herosql/go-agent-claw/internal/context" // 引入我们新建的 context 包
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/schema"
 	"github.com/herosql/go-agent-claw/internal/tools"
@@ -16,7 +17,8 @@ type AgentEngine struct {
 	provider       provider.LLMProvider
 	registry       tools.Registry
 	WorkDir        string
-	EnableThinking bool // 【新增】慢思考模式开关
+	EnableThinking bool                   // 【新增】慢思考模式开关
+	composer       *ctxpkg.PromptComposer // 【新增】引擎持有 Composer 实例
 }
 
 func NewAgentEngine(p provider.LLMProvider, r tools.Registry, workDir string, enableThinking bool) *AgentEngine {
@@ -25,6 +27,7 @@ func NewAgentEngine(p provider.LLMProvider, r tools.Registry, workDir string, en
 		registry:       r,
 		WorkDir:        workDir,
 		EnableThinking: enableThinking,
+		composer:       ctxpkg.NewPromptComposer(workDir), // 初始化组装器
 	}
 }
 
@@ -32,10 +35,11 @@ func NewAgentEngine(p provider.LLMProvider, r tools.Registry, workDir string, en
 func (e *AgentEngine) Run(ctx context.Context, userPrompt string, reporter Reporter) error {
 	log.Printf("[Engine] 引擎启动，锁定工作区: %s\n", e.WorkDir)
 
-	contextHistory := []schema.Message{
-		{Role: schema.RoleSystem, Content: "You are go-tiny-claw, an expert coding assistant."},
-		{Role: schema.RoleUser, Content: userPrompt},
-	}
+	// 【核心修改】动态组装 System Prompt，彻底替换掉以前硬编码的面条提示词！
+	systemMsg := e.composer.Build()
+
+	contextHistory := []schema.Message{systemMsg, // 注入动态组装的内核、AGENTS.md 与 Skills
+		{Role: schema.RoleUser, Content: userPrompt}}
 
 	turnCount := 0
 
