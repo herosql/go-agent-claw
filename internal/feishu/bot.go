@@ -10,10 +10,9 @@ import (
 	"strings"
 
 	"github.com/herosql/go-agent-claw/internal/engine"
+	lark "github.com/larksuite/oapi-sdk-go/v3"
 	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
-
-	lark "github.com/larksuite/oapi-sdk-go/v3"
 )
 
 // FeishuBot 封装了飞书机器人的配置与核心业务流
@@ -114,7 +113,6 @@ func (r *FeishuReporter) sendMsg(text string) {
 			Content(contentStr).
 			Build()).
 		Build()
-
 	_, _ = r.client.Im.Message.Create(context.Background(), msgReq)
 }
 
