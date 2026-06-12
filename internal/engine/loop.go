@@ -29,7 +29,7 @@ func NewAgentEngine(p provider.LLMProvider, r tools.Registry, enableThinking boo
 }
 
 // 【核心改造】: 移除 userPrompt 参数，改为接收一个具体的 Session 实例
-func (e *AgentEngine) Run(ctx context.Context, session *Session, reporter Reporter) error {
+func (e *AgentEngine) Run(ctx context.Context, session *ctxpkg.Session, reporter Reporter) error {
 	log.Printf("[Engine] 唤醒会话 [%s]，锁定工作区: %s\n", session.ID, session.WorkDir)
 
 	// 根据当前 Session 的工作区，动态组装最新的 System Prompt
