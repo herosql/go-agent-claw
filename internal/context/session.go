@@ -15,9 +15,23 @@ type Session struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
+	// 【新增】用于统计该 Session 累计消耗的资源
+	TotalPromptTokens     int
+	TotalCompletionTokens int
+	TotalCostCNY          float64
+
 	// 存放此 Session 中所有的用户输入、大模型回复和工具调用结果
 	history []schema.Message
 	mu      sync.RWMutex // 读写锁，防止并发读写历史时发生 Data Race
+}
+
+// RecordUsage 供外部 Tracker 调用，用于累加账单
+func (s *Session) RecordUsage(prompt int, completion int, cost float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.TotalPromptTokens += prompt
+	s.TotalCompletionTokens += completion
+	s.TotalCostCNY += cost
 }
 
 func NewSession(id string, workDir string) *Session {
@@ -38,33 +52,6 @@ func (s *Session) Append(msgs ...schema.Message) {
 	s.UpdatedAt = time.Now()
 }
 
-// // GetWorkingMemory 是驾驭工程的核心！
-// // 它不返回全量历史，而是从后往前截取最近的 N 条消息，形成 Agent 的"短期工作记忆"。
-// func (s *Session) GetWorkingMemory(limit int) []schema.Message {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-
-// 	total := len(s.history)
-// 	if total <= limit || limit <= 0 {
-// 		res := make([]schema.Message, total)
-// 		copy(res, s.history)
-// 		return res
-// 	}
-
-// 	// 截取最近的 limit 条消息
-// 	res := make([]schema.Message, limit)
-// 	copy(res, s.history[total-limit:])
-
-// 	for len(res) > 0 {
-// 		if res[0].Role == schema.RoleUser && res[0].ToolCallID != "" {
-// 			res = res[1:]
-// 		} else {
-// 			break
-// 		}
-// 	}
-
-//		return res
-//	}
 func (s *Session) GetWorkingMemory(limit int) []schema.Message {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
