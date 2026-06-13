@@ -1,4 +1,4 @@
-// internal/engine/session.go
+// internal/context/session.go
 package context
 
 import (
@@ -36,34 +36,50 @@ func (s *Session) Append(msgs ...schema.Message) {
 	defer s.mu.Unlock()
 	s.history = append(s.history, msgs...)
 	s.UpdatedAt = time.Now()
-
-	// 【持久化预留点】：在真实的工业级实现中（如 Claude Code），
-	// 我们会在这里将 s.history 以 JSONL 的格式 Append 到 workDir/.claw/sessions/xxx.jsonl 中。
-	// s.SaveToDisk()
 }
 
-// GetWorkingMemory 是驾驭工程的核心！
-// 它不返回全量历史，而是从后往前截取最近的 N 条消息，形成 Agent 的“短期工作记忆”。
+// // GetWorkingMemory 是驾驭工程的核心！
+// // 它不返回全量历史，而是从后往前截取最近的 N 条消息，形成 Agent 的"短期工作记忆"。
+// func (s *Session) GetWorkingMemory(limit int) []schema.Message {
+// 	s.mu.RLock()
+// 	defer s.mu.RUnlock()
+
+// 	total := len(s.history)
+// 	if total <= limit || limit <= 0 {
+// 		res := make([]schema.Message, total)
+// 		copy(res, s.history)
+// 		return res
+// 	}
+
+// 	// 截取最近的 limit 条消息
+// 	res := make([]schema.Message, limit)
+// 	copy(res, s.history[total-limit:])
+
+// 	for len(res) > 0 {
+// 		if res[0].Role == schema.RoleUser && res[0].ToolCallID != "" {
+// 			res = res[1:]
+// 		} else {
+// 			break
+// 		}
+// 	}
+
+//		return res
+//	}
 func (s *Session) GetWorkingMemory(limit int) []schema.Message {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	total := len(s.history)
 	if total <= limit || limit <= 0 {
-		// 如果历史总量小于限制，或者不设限，全量返回 (需要深拷贝以防外部修改)
 		res := make([]schema.Message, total)
 		copy(res, s.history)
 		return res
 	}
 
-	// 截取最近的 limit 条消息
 	res := make([]schema.Message, limit)
 	copy(res, s.history[total-limit:])
 
-	// 【驾驭防线】：大模型 API 强制要求历史消息的连续性！
-	// 如果我们截断的第一条消息恰好是一个 ToolResult (RoleUser 且含有 ToolCallID)，
-	// 但发出这个请求的 ToolCall 被我们截断抛弃了，大模型 API 会直接报 400 Bad Request。
-	// 因此，如果切片首条属于“孤儿”工具响应，我们必须将其强行舍弃，顺延到下一条正常的 User/Assistant 消息。
+	// 处理截断边缘的 ToolResult 孤儿问题
 	for len(res) > 0 {
 		if res[0].Role == schema.RoleUser && res[0].ToolCallID != "" {
 			res = res[1:]
