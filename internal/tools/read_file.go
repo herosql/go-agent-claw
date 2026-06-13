@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -62,13 +61,9 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	fullPath := filepath.Join(t.workDir, input.Path)
 
 	// 3. 执行物理 IO 操作
-	file, err := os.Open(fullPath)
-	if err != nil {
-		return "", fmt.Errorf("打开文件失败: %w", err)
-	}
-	defer file.Close()
-
-	content, err := io.ReadAll(file)
+	// 使用 os.ReadFile 替代 os.Open + io.ReadAll + defer Close，
+	// 避免在并发场景下 defer 延迟关闭与 goroutine 时序的竞态条件
+	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		return "", fmt.Errorf("读取文件内容失败: %w", err)
 	}

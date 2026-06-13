@@ -29,6 +29,10 @@ func (r *TerminalReporter) OnToolCall(ctx context.Context, toolName string, args
 	fmt.Printf("   参数: %s\n", displayArgs)
 }
 
+func (r *TerminalReporter) OnToolRunning(ctx context.Context, toolName string, elapsedSecs int) {
+	fmt.Printf("[⏳ 执行中] %s 已运行 %ds...\n", toolName, elapsedSecs)
+}
+
 func (r *TerminalReporter) OnToolResult(ctx context.Context, toolName string, result string, isError bool) {
 	if isError {
 		fmt.Printf("[❌ 执行失败] %s\n", toolName)

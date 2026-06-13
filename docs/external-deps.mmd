@@ -1,0 +1,29 @@
+graph TB
+    subgraph "🦾 Go 依赖"
+        anthropic_sdk["anthropics/anthropic-sdk-go v1.42.0\nClaude API 协议封装"]
+        openai_sdk["openai/openai-go v3.3.35.0\nOpenAI API 协议封装"]
+        lark_sdk["larksuite/oapi-sdk-go v3.7.5\n飞书 HTTP+WebSocket SDK"]
+        websocket["gorilla/websocket v1.5.0\n(lark 传递依赖)"]
+        yaml["gopkg.in/yaml.v3 v3.0.1\n(配置解析)"]
+        protobuf["gogo/protobuf v1.3.2\n(lark 传递依赖)"]
+        jsonschema["invopop/jsonschema v0.13.0\n(lark 传递依赖)"]
+        easyjson["mailru/easyjson v0.7.7\n(lark 传递依赖)"]
+        tidwall["tidwall/gjson v1.18.0\n(lark 传递依赖)"]
+    end
+
+    subgraph "🌐 外部 API"
+        zhipu_openai["智谱 OpenAI 兼容接口\nhttps://open.bigmodel.cn/api/paas/v4/\n用途: OpenAI 协议调用 GLM-4"]
+        zhipu_claude["智谱 Claude 兼容接口\nhttps://open.bigmodel.cn/api/anthropic/\n用途: Claude 协议调用 GLM-4"]
+        feishu_openapi["飞书开放平台 API\nhttps://open.feishu.cn\n用途: 消息收发·审批卡片"]
+    end
+
+    subgraph "📡 外部网络调用"
+        feishu_websocket["飞书 WebSocket 长连接\nlark-sdk 内部维护\n用途: 实时事件推送"]
+        feishu_http["飞书 HTTP Webhook\nhttpserverext\n用途: 接收消息事件"]
+    end
+
+    openai_sdk --> zhipu_openai
+    anthropic_sdk --> zhipu_claude
+    lark_sdk --> feishu_openapi
+    lark_sdk --> feishu_websocket
+    lark_sdk --> feishu_http

@@ -1,0 +1,53 @@
+graph LR
+    
+    node [shape=box style="rounded,filled" fillcolor="lightblue" ]
+
+    schema["📦 schema\n(无内部依赖)"]
+
+    context["📁 context\n依赖: schema"]
+    provider["📁 provider\n依赖: schema"]
+    tools["📁 tools\n依赖: schema, observability"]
+    observability["📁 observability\n依赖: schema, ctxpkg, provider"]
+
+    engine["📁 engine\n依赖: schema, ctxpkg,\nprovider, tools, observability"]
+    feishu["📁 feishu\n依赖: schema, ctxpkg,\nengine (Reporter接口)"]
+    eval["📁 eval\n依赖: schema, ctxpkg,\nprovider, engine,\nobservability, tools"]
+
+    cmd_claw["📁 cmd/claw\n依赖: ctxpkg, engine,\nobservability, provider,\nschema, tools"]
+    cmd_feishu["📁 cmd/feishu\n依赖: ctxpkg, engine,\nfeishu, provider, tools"]
+    cmd_agentops["📁 cmd/agentops\n依赖: ctxpkg, engine,\nfeishu, observability,\nprovider, schema, tools"]
+    cmd_bench["📁 cmd/bench\n依赖: ctxpkg, engine,\neval, observability,\nprovider, schema, tools"]
+
+    schema --> context
+    schema --> provider
+    schema --> tools
+    schema --> observability
+    schema --> engine
+    schema --> feishu
+    schema --> eval
+
+    context --> engine
+    context --> observability
+
+    provider --> engine
+    provider --> observability
+
+    tools --> engine
+
+    observability --> engine
+
+    feishu --> engine
+
+    eval --> engine
+
+    engine --> cmd_claw
+    engine --> cmd_feishu
+    engine --> cmd_agentops
+    engine --> cmd_bench
+
+    legend ["🟢 无循环依赖\n🔴 循环依赖（无）"]
+    legend2 ["注：feishu → engine 仅通过 Reporter 接口引用\ntools → engine 仅通过 AgentRunner 接口引用\n均为接口解耦，无直接包引用循环"]
+
+    style schema fillcolor="lightgreen"
+    style engine fillcolor="lightyellow"
+    style feishu fillcolor="#FFF3CD

@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/herosql/go-agent-claw/internal/observability"
 	"github.com/herosql/go-agent-claw/internal/schema"
@@ -49,10 +49,10 @@ func NewRegistry() Registry {
 func (r *registryImpl) Register(tool BaseTool) {
 	name := tool.Name()
 	if _, exists := r.tools[name]; exists {
-		log.Printf("[Warning] 工具 '%s' 已经被注册，将被覆盖。\n", name)
+		slog.Info("[Warning] 工具 '" + name + "' 已经被注册，将被覆盖。")
 	}
 	r.tools[name] = tool
-	log.Printf("[Registry] 成功挂载工具: %s\n", name)
+	slog.Info("[Registry] 成功挂载工具: " + name)
 }
 
 func (r *registryImpl) Use(mw MiddlewareFunc) {
@@ -90,7 +90,7 @@ func (r *registryImpl) Execute(ctx context.Context, call schema.ToolCall) schema
 	for _, mw := range r.middlewares {
 		allowed, reason := mw(ctx, call)
 		if !allowed {
-			log.Printf("[Registry] ⚠️ 工具 %s 被 Middleware 拦截: %s\n", call.Name, reason)
+			slog.Info("[Registry] ⚠️ 工具 " + call.Name + " 被 Middleware 拦截: " + reason)
 			span.AddAttribute("intercepted", true)
 			span.AddAttribute("reject_reason", reason)
 			return schema.ToolResult{

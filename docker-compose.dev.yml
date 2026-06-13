@@ -1,0 +1,71 @@
+# ==============================================================================
+# docker-compose.dev.yml — 本地开发备选方案
+# 用法:
+#   1. cp .env.example .env  # 填入真实 API Key
+#   2. docker compose -f docker-compose.dev.yml up
+#
+# 注意：本项目无自建 DB/Redis，所有外部依赖（智谱/飞书）均为 HTTP API，
+#       容器内通过环境变量注入 API Key，无需 docker-compose 启动外部服务。
+#       此文件仅提供"一键启动 Bot 服务"的便利。
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # 飞书 HTTP Bot（cmd/feishu）
+  # 监听 :48080，仅接收飞书平台的 HTTP Webhook 回调
+  # --------------------------------------------------------------------------
+  feishu:
+    image: golang:1.26-alpine
+    working_dir: /app
+    command: >
+      sh -c "apk add --no-cache curl ca-certificates &&
+             go mod download &&
+             go run ./cmd/feishu"
+    ports:
+      - "48080:48080"
+    environment:
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY}
+      - FEISHU_APP_ID=${FEISHU_APP_ID}
+      - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
+      - FEISHU_VERIFY_TOKEN=${FEISHU_VERIFY_TOKEN:-}
+      - FEISHU_ENCRYPT_KEY=${FEISHU_ENCRYPT_KEY:-}
+    volumes:
+      - ./:/app
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # 飞书 WebSocket Bot + 审批流（cmd/agentops）
+  # 同时处理消息和审批，无需 HTTP Webhook URL
+  # --------------------------------------------------------------------------
+  agentops:
+    image: golang:1.26-alpine
+    working_dir: /app
+    command: >
+      sh -c "apk add --no-cache curl ca-certificates &&
+             go mod download &&
+             go run ./cmd/agentops"
+    ports:
+      - "48081:48081"   # 备用端口（如需同时跑两个 Bot）
+    environment:
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY}
+      - FEISHU_APP_ID=${FEISHU_APP_ID}
+      - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
+    volumes:
+      - ./:/app
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # 环境检查工具（一次性）
+  # --------------------------------------------------------------------------
+  envcheck:
+    image: golang:1.26-alpine
+    working_dir: /app
+    command: ["go", "run", "./cmd/envcheck"]
+    environment:
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY}
+      - FEISHU_APP_ID=${FEISHU_APP_ID}
+      - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
+    volumes:
+      - ./:/app
+    profiles:
+      - checkonly  # 仅运行: docker compose -f docker-compose.dev.yml --profile checkonly up

@@ -44,6 +44,27 @@ type bashArgs struct {
 	Command string `json:"command"`
 }
 
+// progressReporter is the interface used by BashTool to send running updates.
+type progressReporter interface {
+	OnToolRunning(ctx context.Context, toolName string, elapsedSecs int)
+}
+
+// progressKey is a private context key type to avoid collisions.
+type progressKey struct{}
+
+// reporterFromContext extracts a progressReporter from context, if present.
+func reporterFromContext(ctx context.Context) progressReporter {
+	if r := ctx.Value(progressKey{}); r != nil {
+		return r.(progressReporter)
+	}
+	return nil
+}
+
+// SetProgressReporter returns a new context with the reporter attached.
+func SetProgressReporter(ctx context.Context, r progressReporter) context.Context {
+	return context.WithValue(ctx, progressKey{}, r)
+}
+
 func (t *BashTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	var input bashArgs
 	if err := json.Unmarshal(args, &input); err != nil {
@@ -51,39 +72,53 @@ func (t *BashTool) Execute(ctx context.Context, args json.RawMessage) (string, e
 	}
 
 	// 【驾驭底线 1】：Time Budgeting (时间预算与超时控制)
-	// 给予 bash 命令一个最大执行时间，防止大模型卡死进程 (比如运行了 top 或持续监听的 Web 服务)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// 在 macOS/Linux 下，我们通过将指令包裹在 `bash -c` 中执行，以支持环境变量、管道和逻辑与(&&)等复杂 Shell 语法。
-	cmd := exec.CommandContext(timeoutCtx, "bash", "-c", input.Command)
+	// 尝试从 context 中获取进度 reporter
+	reporter := reporterFromContext(ctx)
 
-	// 【驾驭底线 2】：绑定执行的工作区目录
-	// 确保命令默认在用户指定的 WorkDir 下执行，而不是引擎启动时的绝对路径。
+	// 启动进度通知 goroutine：每 5 秒发送一次"执行中"状态
+	done := make(chan struct{})
+	if reporter != nil {
+		go func() {
+			for i := 5; ; i += 5 {
+				select {
+				case <-done:
+					return
+				case <-time.After(5 * time.Second):
+					reporter.OnToolRunning(ctx, t.Name(), i)
+				}
+			}
+		}()
+	}
+
+	// 执行 bash 命令
+	cmd := exec.CommandContext(timeoutCtx, "bash", "-c", input.Command)
 	cmd.Dir = t.workDir
 
-	// 执行并捕获 CombinedOutput (合并 stdout 和 stderr)
 	out, err := cmd.CombinedOutput()
 	outputStr := string(out)
 
-	// 如果命令执行超时，返回警告信息让模型知晓
+	// 通知 goroutine 退出
+	close(done)
+
+	// 超时处理
 	if timeoutCtx.Err() == context.DeadlineExceeded {
 		return outputStr + "\n[警告: 命令执行超时(30s)，已被系统强制终止。如果是启动常驻服务，请尝试将其转入后台。]", nil
 	}
 
-	// 【驾驭底线 3】：错误原样回传 (Self-Correction 自愈机制)
-	// 当 bash 报错时（err != nil），我们绝对不能返回 Go 的 error 阻断程序！
-	// 我们必须把 err 和 outputStr 拼接成字符串返回，利用大模型的自纠错能力自己分析报错！
+	// 错误处理
 	if err != nil {
 		return fmt.Sprintf("执行报错: %v\n输出:\n%s", err, outputStr), nil
 	}
 
-	// 如果没有终端输出（比如仅仅执行了 mkdir），给模型一个明确的执行成功的反馈
+	// 空输出
 	if outputStr == "" {
 		return "命令执行成功，无终端输出。", nil
 	}
 
-	// 【驾驭底线 4】：长度截断保护 (防 OOM)
+	// 长度截断保护
 	const maxLen = 8000
 	if len(outputStr) > maxLen {
 		return fmt.Sprintf("%s\n\n...[终端输出过长，已截断至前 %d 字节]...", outputStr[:maxLen], maxLen), nil

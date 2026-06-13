@@ -5,7 +5,8 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"log/slog"
+	"strconv"
 
 	"github.com/herosql/go-agent-claw/internal/schema"
 )
@@ -45,12 +46,12 @@ func (r *ReminderInjector) CheckAndInject(lastToolCall schema.ToolCall, lastResu
 	r.consecutiveFailures[fingerprint]++
 	failCount := r.consecutiveFailures[fingerprint]
 
-	log.Printf("[Reminder] 监控到工具 %s 执行失败，该参数特征连续失败次数: %d\n", lastToolCall.Name, failCount)
+	slog.Info("[Reminder] 监控到工具 " + lastToolCall.Name + " 执行失败，该参数特征连续失败次数: " + strconv.Itoa(failCount))
 
 	// 【驾驭底线】：触发死循环打断机制！
 	// 我们设定阈值为 3 次。如果大模型连续 3 次都在同一个地方跌倒，必须强行打断它的局部执念。
 	if failCount >= 3 {
-		log.Println("[Reminder] ⚠️ 触发死循环干预！注入强力修正指令。")
+		slog.Info("[Reminder] ⚠️ 触发死循环干预！注入强力修正指令。")
 
 		// 构造一条极其严厉的行动指南
 		nudgeMsg := fmt.Sprintf(`[SYSTEM REMINDER 警告] 

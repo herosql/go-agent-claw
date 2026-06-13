@@ -4,9 +4,10 @@ package eval
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
@@ -48,34 +49,34 @@ func NewBenchmarkRunner(model string) *BenchmarkRunner {
 
 // RunSuite 执行一组评测集，并返回跑分报告
 func (b *BenchmarkRunner) RunSuite(ctx context.Context, testcases []TestCase) {
-	log.Println("==================================================")
-	log.Printf("🚀 启动自动化 Harness Benchmark 评估... | 模型: %s\n", b.modelName)
-	log.Println("==================================================")
+	slog.Info("==================================================")
+	slog.Info("🚀 启动自动化 Harness Benchmark 评估... | 模型: " + b.modelName)
+	slog.Info("==================================================")
 
 	var results []TestResult
 	passedCount := 0
 	totalCost := 0.0
 
 	for _, tc := range testcases {
-		log.Printf("\n>>> ⏳ 正在执行用例 [%s]: %s\n", tc.ID, tc.Name)
+		slog.Info(">>> ⏳ 正在执行用例 [" + tc.ID + "]: " + tc.Name)
 
 		res := b.runSingleTest(ctx, tc)
 		results = append(results, res)
 
 		if res.Passed {
 			passedCount++
-			log.Printf(">>> ✅ 用例 [%s] 测试通过! | 耗时: %dms | 花费: ¥%.6f\n", tc.ID, res.DurationMs, res.TotalCostCNY)
+			slog.Info(">>> ✅ 用例 [" + tc.ID + "] 测试通过! | 耗时: " + strconv.FormatInt(res.DurationMs, 10) + "ms | 花费: ¥" + fmt.Sprintf("%.6f", res.TotalCostCNY))
 		} else {
-			log.Printf(">>> ❌ 用例 [%s] 测试失败! | 错误: %s\n", tc.ID, res.ErrorMsg)
+			slog.Info(">>> ❌ 用例 [" + tc.ID + "] 测试失败! | 错误: " + res.ErrorMsg)
 		}
 		totalCost += res.TotalCostCNY
 	}
 
 	// 打印终极报表
-	log.Println("\n================ 🏆 跑分终极报告 ================")
-	log.Printf("总用例数: %d | 成功数: %d | 成功率: %.2f%%\n", len(testcases), passedCount, float64(passedCount)/float64(len(testcases))*100)
-	log.Printf("总消耗成本: ¥%.6f\n", totalCost)
-	log.Println("==================================================")
+	slog.Info("================ 🏆 跑分终极报告 ================")
+	slog.Info("总用例数: " + strconv.Itoa(len(testcases)) + " | 成功数: " + strconv.Itoa(passedCount) + " | 成功率: " + fmt.Sprintf("%.2f%%", float64(passedCount)/float64(len(testcases))*100))
+	slog.Info("总消耗成本: ¥" + fmt.Sprintf("%.6f", totalCost))
+	slog.Info("==================================================")
 }
 
 func (b *BenchmarkRunner) runSingleTest(ctx context.Context, tc TestCase) TestResult {

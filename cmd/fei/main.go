@@ -3,12 +3,13 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
 	"github.com/herosql/go-agent-claw/internal/engine"
 	"github.com/herosql/go-agent-claw/internal/feishu"
+	"github.com/herosql/go-agent-claw/internal/loginit"
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/tools"
 	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
@@ -16,15 +17,19 @@ import (
 )
 
 func main() {
+	loginit.Init()
+
 	// 1. 环境检查
 	if os.Getenv("ZHIPU_API_KEY") == "" {
-		log.Fatal("请先导出 ZHIPU_API_KEY 环境变量")
+		slog.Error("请先导出 ZHIPU_API_KEY 环境变量")
+		os.Exit(1)
 	}
 
 	appID := os.Getenv("FEISHU_APP_ID")
 	appSecret := os.Getenv("FEISHU_APP_SECRET")
 	if appID == "" || appSecret == "" {
-		log.Fatal("请设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		slog.Error("请设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		os.Exit(1)
 	}
 
 	// 2. 初始化工作区
@@ -58,15 +63,16 @@ func main() {
 		larkws.WithAutoReconnect(true),
 	)
 
-	log.Println("==================================================")
-	log.Printf("🚀 go-agent-claw 飞书服务端已启动\n")
-	log.Printf("📁 工作区: %s\n", workDir)
-	log.Printf("🤖 模型: %s\n", modelName)
-	log.Println("==================================================")
+	slog.Info("==================================================")
+	slog.Info("🚀 go-agent-claw 飞书服务端已启动")
+	slog.Info("📁 工作区: " + workDir)
+	slog.Info("🤖 模型: " + modelName)
+	slog.Info("==================================================")
 
 	// 8. 启动 WebSocket 长连接
 	err := wsClient.Start(context.Background())
 	if err != nil {
-		log.Fatalf("服务器启动失败: %v", err)
+		slog.Error("服务器启动失败", "err", err)
+		os.Exit(1)
 	}
 }

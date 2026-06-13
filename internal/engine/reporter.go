@@ -12,6 +12,9 @@ type Reporter interface {
 	// OnToolCall 当模型决定并发调用工具时调用
 	OnToolCall(ctx context.Context, toolName string, args string)
 
+	// OnToolRunning 当工具正在执行中（超过5秒未返回）时定期调用，防止用户感觉"卡住"
+	OnToolRunning(ctx context.Context, toolName string, elapsedSecs int)
+
 	// OnToolResult 当工具在底层执行完毕并返回结果时调用
 	OnToolResult(ctx context.Context, toolName string, result string, isError bool)
 

@@ -1,0 +1,45 @@
+#!/bin/sh
+# pre-push hook: 运行完整测试和构建检查
+# 遵循宪法第七条：依赖安全原则
+
+echo "==> Running pre-push checks..."
+
+# 1. 全量测试
+echo "[1/4] Running tests..."
+go test -v ./...
+if [ $? -ne 0 ]; then
+    echo "FAIL: tests failed"
+    exit 1
+fi
+
+# 2. 构建检查
+echo "[2/4] Building..."
+go build ./...
+if [ $? -ne 0 ]; then
+    echo "FAIL: build failed"
+    exit 1
+fi
+
+# 3. golangci-lint（包含 govulncheck）
+echo "[3/4] Running golangci-lint..."
+golangci-lint run --timeout=5m
+if [ $? -ne 0 ]; then
+    echo "FAIL: golangci-lint failed"
+    exit 1
+fi
+
+# 4. govulncheck 独立检查（双重保障）
+echo "[4/4] Running govulncheck..."
+GOBIN="$(go env GOPATH)/bin"
+if [ -f "$GOBIN/govulncheck.exe" ]; then
+    "$GOBIN/govulncheck.exe" ./...
+else
+    govulncheck ./...
+fi
+if [ $? -ne 0 ]; then
+    echo "FAIL: vulnerabilities detected"
+    exit 1
+fi
+
+echo "==> pre-push checks passed"
+exit 0

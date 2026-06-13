@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/herosql/go-agent-claw/internal/schema"
 )
@@ -69,7 +69,7 @@ func (t *SubagentTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", fmt.Errorf("解析参数失败: %w", err)
 	}
 
-	log.Printf("[Subagent] 🚀 主 Agent 发起委派！正在拉起探路者: [%s]...\n", input.TaskPrompt)
+	slog.Info("[Subagent] 🚀 主 Agent 发起委派！正在拉起探路者: [" + input.TaskPrompt + "]...")
 
 	// 【核心降维打击】：拉起一个完全物理隔离的子循环
 	// 我们把针对该任务的专项指令传给子智能体，并仅提供 readOnlyRegistry。
@@ -80,7 +80,7 @@ func (t *SubagentTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return fmt.Errorf("子智能体执行失败: %v", err).Error(), nil
 	}
 
-	log.Printf("[Subagent] ✅ 子智能体任务结束。报告返回给主干...")
+	slog.Info("[Subagent] ✅ 子智能体任务结束。报告返回给主干...")
 
 	// 最终，几万字的代码探索，化作了这一段轻量级的 Summary，
 	// 就像一次普通的 API 调用一样，返回给了始终保持清醒的主 Agent。

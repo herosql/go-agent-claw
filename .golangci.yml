@@ -1,0 +1,53 @@
+# golangci-lint configuration
+# see: https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck          # 检查 errcheck
+    - gosimple          # 检查简化代码
+    - govet             # 检查可疑代码
+    - ineffassign       # 检查无效赋值
+    - staticcheck       # 静态分析
+    - unused            # 检查未使用的代码
+    - gofmt             # 检查代码格式
+    - goimports         # 检查 import 格式
+    - misspell          # 检查拼写错误
+    - prealloc          # 检查预分配优化
+    - revive            # Go 代码风格检查
+    - gosec             # 安全检查
+    - nilerr            # 检查 nil 错误返回
+    - errorlint         # 检查错误处理
+    - stylecheck        # 代码风格
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  govet:
+    enable-all: true
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/herosql/go-agent-claw
+  revive:
+    rules:
+      - name: var-naming
+      - name: package-comments
+      - name: exported
+      - name: context-as-argument
+  gosec:
+    excludes:
+      - G104  # ioutil 用法（新版已废弃）
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+service:
+  golangci-lint-version: 2.1.0

@@ -1,0 +1,103 @@
+erDiagram
+    %% Session 核心实体
+    SESSION ||--o{ MESSAGE : "history[]"
+    SESSION ||--o| COST_TRACKER : "装饰器绑定"
+    SESSION ||--o{ SPAN : "RootSpan → Children树"
+    SESSION {
+        string id PK
+        string workDir
+        datetime createdAt
+        datetime updatedAt
+        int totalPromptTokens
+        int totalCompletionTokens
+        float totalCostCNY
+    }
+
+    %% Message
+    MESSAGE {
+        string role "system|user|assistant"
+        string content
+        string toolCallID FK "关联ToolCall"
+    }
+    MESSAGE ||--o{ TOOL_CALL : "ToolCalls[]"
+    MESSAGE ||--|| USAGE : "Usage"
+
+    %% Tool 相关
+    TOOL_CALL {
+        string id PK
+        string name
+        json arguments
+    }
+    TOOL_CALL ||--o| TOOL_RESULT : "通过ToolCallID关联"
+
+    TOOL_RESULT {
+        string toolCallID FK
+        string output
+        boolean isError
+    }
+
+    TOOL_DEFINITION {
+        string name PK
+        string description
+        json inputSchema
+    }
+
+    %% Registry
+    REGISTRY ||--o{ BASE_TOOL : "tools[]"
+    REGISTRY ||--o{ MIDDLEWARE_FUNC : "middlewares[]"
+    BASE_TOOL ||--|| TOOL_DEFINITION : "Definition()"
+
+    MIDDLEWARE_FUNC {
+        string funcName
+    }
+
+    %% Approval
+    APPROVAL_MANAGER ||--o{ PENDING_TASK : "pendingTasks map"
+    PENDING_TASK {
+        string taskID PK
+        channel approvalResult
+    }
+
+    %% Cost
+    COST_TRACKER {
+        string modelName
+        float inputPrice
+        float outputPrice
+    }
+
+    %% Session Manager (全局单例)
+    SESSION_MANAGER ||--o{ SESSION : "sessions map"
+
+    %% Skill
+    SKILL ||--o{ SKILL_MD : "文件来源"
+    SKILL_MD {
+        string path
+        string name
+        string description
+        string body
+    }
+
+    %% Engine 子组件
+    AGENT_ENGINE ||--|| COMPACTOR : "compactor"
+    AGENT_ENGINE ||--|| REMINDER_INJECTOR : "injector"
+    AGENT_ENGINE ||--|| PROMPT_COMPOSER : "composer"
+    AGENT_ENGINE ||--|| RECOVERY_MANAGER : "recovery"
+
+    %% Test
+    BENCHMARK_RUNNER ||--o{ TEST_CASE : "testcases[]"
+    TEST_CASE ||--|| TEST_RESULT : "执行结果"
+    TEST_CASE {
+        string id PK
+        string name
+        string setupScript
+        string taskPrompt
+        string validateScript
+        int maxTurns
+    }
+    TEST_RESULT {
+        string testCaseID FK
+        boolean passed
+        float totalCostCNY
+        int64 durationMs
+        string errorMsg
+    }

@@ -3,12 +3,13 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
 	"github.com/herosql/go-agent-claw/internal/engine"
 	"github.com/herosql/go-agent-claw/internal/feishu"
+	"github.com/herosql/go-agent-claw/internal/loginit"
 	"github.com/herosql/go-agent-claw/internal/observability"
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/schema"
@@ -18,17 +19,20 @@ import (
 )
 
 func main() {
-	log.Println("🚀 正在启动 go-agent-claw AgentOps 飞书服务端 (WebSocket)...")
+	loginit.Init()
+	slog.Info("🚀 正在启动 go-agent-claw AgentOps 飞书服务端 (WebSocket)...")
 
 	if os.Getenv("ZHIPU_API_KEY") == "" || os.Getenv("FEISHU_APP_ID") == "" || os.Getenv("FEISHU_APP_SECRET") == "" {
-		log.Fatal("❌ 请先导出 ZHIPU_API_KEY、FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		slog.Error("❌ 请先导出 ZHIPU_API_KEY、FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		os.Exit(1)
 	}
 
 	// 1. 设定监控的物理工作区
 	workDir, _ := os.Getwd()
 	workDir += "/workspace"
 	if err := os.MkdirAll(workDir, 0755); err != nil {
-		log.Fatalf("无法创建工作区: %v", err)
+		slog.Error("无法创建工作区", "err", err)
+		os.Exit(1)
 	}
 
 	// 2. 初始化底层大脑与注册表
@@ -48,7 +52,7 @@ func main() {
 		// 检查是否命中危险命令黑名单
 		if feishu.IsDangerousCommand(call.Name, argsStr) {
 			taskID := call.ID
-			log.Printf("[Middleware] 拦截到高危操作: %s，触发飞书审批挂起...\n", call.Name)
+			slog.Info("[Middleware] 拦截到高危操作: " + call.Name + "，触发飞书审批挂起...")
 
 			// 【驾驭魔术】：从 Context 中优雅地取出专属于发起该请求群聊的 Reporter！
 			currentReporter, _ := feishu.ReporterFromContext(ctx).(*feishu.FeishuReporter)
@@ -65,7 +69,7 @@ func main() {
 		// 普通读取命令，YOLO 放行
 		return true, ""
 	})
-	log.Println("🛡️ 安全防御 Middleware 已挂载。")
+	slog.Info("🛡️ 安全防御 Middleware 已挂载。")
 
 	// 4. 动态 Factory 组装器：保证高并发调用的物理独立性与账单准确追踪
 	engineFactory := func(session *ctxpkg.Session) *engine.AgentEngine {
@@ -89,15 +93,16 @@ func main() {
 		larkws.WithAutoReconnect(true),
 	)
 
-	log.Println("==================================================")
-	log.Printf("🚀 go-agent-claw AgentOps 飞书服务端已启动\n")
-	log.Printf("📁 工作区: %s\n", workDir)
-	log.Printf("🤖 模型: %s\n", modelName)
-	log.Println("==================================================")
+	slog.Info("==================================================")
+	slog.Info("🚀 go-agent-claw AgentOps 飞书服务端已启动")
+	slog.Info("📁 工作区: " + workDir)
+	slog.Info("🤖 模型: " + modelName)
+	slog.Info("==================================================")
 
 	// 7. 启动 WebSocket 长连接
 	err := wsClient.Start(context.Background())
 	if err != nil {
-		log.Fatalf("服务器启动失败: %v", err)
+		slog.Error("服务器启动失败", "err", err)
+		os.Exit(1)
 	}
 }

@@ -2,7 +2,7 @@ package feishu
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher"
@@ -20,7 +20,7 @@ func (b *FeishuBot) GetEventDispatcherSocket() *dispatcher.EventDispatcher {
 			contentStr = strings.TrimSuffix(contentStr, `"}`)
 
 			chatId := *event.Event.Message.ChatId
-			log.Printf("[Feishu] 收到会话 %s 消息: %s\n", chatId, contentStr)
+			slog.Info("[Feishu] 收到会话 " + chatId + " 消息: " + contentStr)
 
 			// 原有：起 Goroutine 跑 Agent，避免阻塞，保留不变
 			go b.handleAgentRun(chatId, contentStr)

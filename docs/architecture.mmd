@@ -1,0 +1,96 @@
+graph TB
+    subgraph "入口层 cmd/"
+        claw["🦄 claw\nCLI 交互入口"]
+        feishu["📱 feishu\nHTTP 飞书 Bot"]
+        agentops["⚡ agentops\nWebSocket 飞书 Bot（审批流）"]
+        bench["📊 bench\nBenchmark 评测"]
+        envcheck["🔍 envcheck\n环境检查"]
+    end
+
+    subgraph "引擎层 internal/engine"
+        AgentEngine["⚙️ AgentEngine\n两阶段循环：Thinking→Action\n并行调度工具 + 死循环检测"]
+        Reporter["📢 Reporter 接口\n抽象输出层（终端/飞书）"]
+        ReminderInjector["🚨 ReminderInjector\n连续3次失败注入打断指令"]
+    end
+
+    subgraph "上下文层 internal/context"
+        Session["💾 Session\n维护历史·断点续传"]
+        Compactor["🗜️ Compactor\n超 200k 字符压缩"]
+        PromptComposer["📝 PromptComposer\n拼装 System Prompt"]
+        RecoveryManager["🔧 RecoveryManager\n报错匹配自救指南"]
+        SkillLoader["📦 SkillLoader\n加载 .claw/skills/"]
+    end
+
+    subgraph "工具层 internal/tools"
+        Registry["📋 Registry\n工具注册·Middleware 链"]
+        BashTool["💻 BashTool\n30s 超时·8k 截断"]
+        ReadFileTool["📖 ReadFileTool\n工作区受限读取"]
+        WriteFileTool["✍️ WriteFileTool\n工作区受限写入"]
+        EditFileTool["🔁 EditFileTool\n四级模糊匹配"]
+        SubagentTool["🤖 SubagentTool\n只读子 Agent（≤10轮）"]
+    end
+
+    subgraph "Provider 层 internal/provider"
+        LLMProvider["🔌 LLMProvider 接口"]
+        OpenAIProvider["🌐 OpenAIProvider\n→ 智谱 GLM"]
+        ClaudeProvider["🤖 ClaudeProvider\n→ 智谱 GLM"]
+        CostTracker["💰 CostTracker\n计量装饰器"]
+    end
+
+    subgraph "飞书层 internal/feishu"
+        FeishuBot["🤖 FeishuBot\n事件分发"]
+        ApprovalManager["✅ ApprovalManager\nChannel 阻塞等待审批"]
+        FeishuReporter["📲 FeishuReporter"]
+    end
+
+    subgraph "可观测 internal/observability"
+        Span["📊 Span 树"]
+        TraceExporter["💾 JSON 追踪文件"]
+    end
+
+    subgraph "Schema internal/schema"
+        Message["📨 Message"]
+        ToolCall["🔧 ToolCall"]
+        ToolResult["📤 ToolResult"]
+        ToolDefinition["📋 ToolDefinition"]
+    end
+
+    subgraph "评测 internal/eval"
+        BenchmarkRunner["🎯 BenchmarkRunner"]
+    end
+
+    subgraph "外部依赖"
+        anthropic["🦾 anthropics-sdk-go"]
+        openai["🌏 openai-go v3"]
+        lark["📮 lark-suite-sdk v3"]
+    end
+
+    claw --> AgentEngine
+    feishu --> AgentEngine
+    agentops --> AgentEngine
+
+    AgentEngine --> Reporter
+    AgentEngine --> ReminderInjector
+    AgentEngine --> Registry
+    AgentEngine --> LLMProvider
+    AgentEngine --> Session
+    AgentEngine --> Compactor
+
+    Registry --> BashTool
+    Registry --> ReadFileTool
+    Registry --> WriteFileTool
+    Registry --> EditFileTool
+    Registry --> SubagentTool
+
+    LLMProvider --> OpenAIProvider
+    LLMProvider --> ClaudeProvider
+    CostTracker --> OpenAIProvider
+    CostTracker --> ClaudeProvider
+
+    FeishuBot --> ApprovalManager
+    FeishuBot --> FeishuReporter
+
+    anthropic --> ClaudeProvider
+    openai --> OpenAIProvider
+    lark --> FeishuBot
+    lark --> agentops

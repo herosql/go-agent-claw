@@ -3,7 +3,8 @@ package context
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
+	"strconv"
 
 	"github.com/herosql/go-agent-claw/internal/schema"
 )
@@ -31,7 +32,7 @@ func (c *Compactor) Compact(msgs []schema.Message) []schema.Message {
 		return msgs
 	}
 
-	log.Printf("[Compactor] ⚠️ 内存告警：当前上下文长度 (%d 字符) 超过阈值 (%d)，触发压缩清理...\n", currentLength, c.MaxChars)
+	slog.Info("[Compactor] ⚠️ 内存告警：当前上下文长度 (" + strconv.Itoa(currentLength) + " 字符) 超过阈值 (" + strconv.Itoa(c.MaxChars) + ")，触发压缩清理...")
 
 	var compacted []schema.Message
 	msgCount := len(msgs)
@@ -84,7 +85,7 @@ func (c *Compactor) Compact(msgs []schema.Message) []schema.Message {
 	}
 
 	newLength := c.estimateLength(compacted)
-	log.Printf("[Compactor] ✅ 压缩完成。上下文长度从 %d 降至 %d 字符。\n", currentLength, newLength)
+	slog.Info("[Compactor] ✅ 压缩完成。上下文长度从 " + strconv.Itoa(currentLength) + " 降至 " + strconv.Itoa(newLength) + " 字符。")
 
 	return compacted
 }

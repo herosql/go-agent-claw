@@ -5,13 +5,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
 
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
 	"github.com/herosql/go-agent-claw/internal/engine"
+	"github.com/herosql/go-agent-claw/internal/loginit"
 	"github.com/herosql/go-agent-claw/internal/observability"
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/schema"
@@ -19,6 +20,8 @@ import (
 )
 
 func main() {
+	loginit.Init()
+
 	// 1. 命令行参数解析
 	promptPtr := flag.String("prompt", "", "要交给 Agent 执行的任务描述")
 	workDirPtr := flag.String("dir", ".", "Agent 运行的工作区目录路径 (默认为当前目录)")
@@ -33,7 +36,8 @@ func main() {
 	// 解析工作区绝对路径
 	workDir, err := filepath.Abs(*workDirPtr)
 	if err != nil {
-		log.Fatalf("解析工作区路径失败: %v", err)
+		slog.Error("解析工作区路径失败", "err", err)
+		os.Exit(1)
 	}
 
 	fmt.Println("==================================================")
@@ -85,7 +89,8 @@ func main() {
 	// 6. 发起冲锋：启动 Main Loop！
 	err = eng.Run(ctx, sess, reporter)
 	if err != nil {
-		log.Fatalf("\n💥 引擎运行崩溃: %v", err)
+			slog.Error("💥 引擎运行崩溃", "err", err)
+		os.Exit(1)
 	}
 
 	fmt.Println("\n==================================================")

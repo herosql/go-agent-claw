@@ -3,13 +3,17 @@ package observability
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"strconv"
 	"time"
 
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/schema"
 )
+
+func formatInt(n int) string  { return strconv.Itoa(n) }
+func formatCost(f float64) string { return strconv.FormatFloat(f, 'f', 6, 64) }
 
 // PricingModel 定义了不同大模型的计费标准 (单位: 美元/1M Tokens)
 // 为了演示，这里硬编码了当前市面上几个主流模型的官方大致定价。
@@ -50,7 +54,7 @@ func (t *CostTracker) Generate(ctx context.Context, msgs []schema.Message, avail
 
 	// 如果报错了，只打印报错时间，不计费
 	if err != nil {
-		log.Printf("[Tracker] ❌ API 调用失败，耗时: %v\n", latency)
+		slog.Info("[Tracker] ❌ API 调用失败 | 耗时: " + latency.String())
 		return respMsg, err
 	}
 
@@ -66,16 +70,17 @@ func (t *CostTracker) Generate(ctx context.Context, msgs []schema.Message, avail
 		}
 
 		// 5. 打印精美的仪表盘日志
-		log.Printf("[Tracker] 📊 API 调用完成 | 耗时: %v | 输入: %d tk | 输出: %d tk | 花费: ¥%.6f\n",
-			latency, promptTokens, completionTokens, cost)
+		slog.Info("[Tracker] 📊 API 调用完成 | 耗时: " + latency.String() +
+			" | 输入: " + formatInt(promptTokens) + " tk | 输出: " + formatInt(completionTokens) +
+			" tk | 花费: ¥" + formatCost(cost))
 
 		// 6. 将账单累加到当前的 Session 中，供人类后续随时查询
 		if t.session != nil {
 			t.session.RecordUsage(promptTokens, completionTokens, cost)
-			log.Printf("[Tracker] 💰 当前会话 (%s) 累计花费: ¥%.6f\n", t.session.ID, t.session.TotalCostCNY)
+			slog.Info("[Tracker] 💰 当前会话 (" + t.session.ID + ") 累计花费: ¥" + formatCost(t.session.TotalCostCNY))
 		}
 	} else {
-		log.Printf("[Tracker] ⚠️ API 调用完成，但未返回 Usage 数据 | 耗时: %v\n", latency)
+		slog.Info("[Tracker] ⚠️ API 调用完成，但未返回 Usage 数据 | 耗时: " + latency.String())
 	}
 
 	return respMsg, nil

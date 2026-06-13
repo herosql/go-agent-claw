@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -57,7 +57,8 @@ func NewFeishuBotWithFactory(factory AgentEngineFactory, workDir string) *Feishu
 	appSecret := os.Getenv("FEISHU_APP_SECRET")
 
 	if appID == "" || appSecret == "" {
-		log.Fatal("请设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		slog.Error("请设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		os.Exit(1)
 	}
 
 	client := lark.NewClient(appID, appSecret)
@@ -77,7 +78,8 @@ func NewFeishuBot(eng *engine.AgentEngine, sess *ctxpkg.Session) *FeishuBot {
 	appSecret := os.Getenv("FEISHU_APP_SECRET")
 
 	if appID == "" || appSecret == "" {
-		log.Fatal("请设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		slog.Error("请设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+		os.Exit(1)
 	}
 
 	client := lark.NewClient(appID, appSecret)
@@ -107,21 +109,21 @@ func (b *FeishuBot) GetEventDispatcher() *dispatcher.EventDispatcher {
 			contentStr = strings.TrimSuffix(contentStr, `"}`)
 
 			chatId := *event.Event.Message.ChatId
-			log.Printf("[Feishu] 收到会话 %s 消息: %s\n", chatId, contentStr)
+			slog.Info("[Feishu] 收到会话 " + chatId + " 消息: " + contentStr)
 
 			// 拦截人工审批的特殊口令，并唤醒挂起的 Registry 协程
 			if strings.HasPrefix(contentStr, "approve ") {
 				taskID := strings.TrimPrefix(contentStr, "approve ")
 				taskID = strings.TrimSpace(taskID)
 				GlobalApprovalMgr.ResolveApproval(taskID, true, "人类管理员已批准操作")
-				log.Printf("[Feishu] 会话 %s: ✅ 已为您批准任务 %s", chatId, taskID)
+				slog.Info("[Feishu] 会话 " + chatId + ": ✅ 已为您批准任务 " + taskID)
 				return nil
 			}
 			if strings.HasPrefix(contentStr, "reject ") {
 				taskID := strings.TrimPrefix(contentStr, "reject ")
 				taskID = strings.TrimSpace(taskID)
 				GlobalApprovalMgr.ResolveApproval(taskID, false, "人类管理员认为该操作存在极高风险，已无情拒绝")
-				log.Printf("[Feishu] 会话 %s: 🚫 已拒绝任务 %s", chatId, taskID)
+				slog.Info("[Feishu] 会话 " + chatId + ": 🚫 已拒绝任务 " + taskID)
 				return nil
 			}
 
@@ -193,14 +195,24 @@ func (r *FeishuReporter) OnThinking(ctx context.Context) {
 }
 
 func (r *FeishuReporter) OnToolCall(ctx context.Context, toolName string, args string) {
+	// 将 JSON 参数中的字符串 \n 转换为真实换行，使显示更易读
+	args = strings.ReplaceAll(args, "\\n", "\n")
 	r.sendMsg(fmt.Sprintf("🛠️ **正在执行工具**：`%s`\n参数：`%s`", toolName, args))
 }
 
+func (r *FeishuReporter) OnToolRunning(ctx context.Context, toolName string, elapsedSecs int) {
+	r.sendMsg(fmt.Sprintf("⏳ **执行中** (%s) — 已运行 %ds...", toolName, elapsedSecs))
+}
+
 func (r *FeishuReporter) OnToolResult(ctx context.Context, toolName string, result string, isError bool) {
+	display := result
+	if len(display) > 200 {
+		display = display[:200] + "... (已截断)"
+	}
 	if isError {
-		r.sendMsg(fmt.Sprintf("⚠️ **执行报错** (%s)：\n%s", toolName, result))
+		r.sendMsg(fmt.Sprintf("⚠️ **执行报错** (%s)：\n%s", toolName, display))
 	} else {
-		r.sendMsg(fmt.Sprintf("✅ **执行成功** (%s)", toolName))
+		r.sendMsg(fmt.Sprintf("✅ **执行成功** (%s)\n%s", toolName, display))
 	}
 }
 

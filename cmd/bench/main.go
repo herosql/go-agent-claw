@@ -3,15 +3,19 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/herosql/go-agent-claw/internal/eval"
+	"github.com/herosql/go-agent-claw/internal/loginit"
 )
 
 func main() {
+	loginit.Init()
+
 	if os.Getenv("ZHIPU_API_KEY") == "" {
-		log.Fatal("请先导出 ZHIPU_API_KEY 环境变量进行跑分测试")
+		slog.Error("请先导出 ZHIPU_API_KEY 环境变量进行跑分测试")
+		os.Exit(1)
 	}
 
 	// 构建一套微型评测集

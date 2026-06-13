@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -37,7 +37,7 @@ func NewAgentEngine(p provider.LLMProvider, r tools.Registry, enableThinking boo
 }
 
 func (e *AgentEngine) Run(ctx context.Context, session *ctxpkg.Session, reporter Reporter) error {
-	log.Printf("[Engine] 唤醒会话 [%s]，锁定工作区: %s (PlanMode: %v)\n", session.ID, session.WorkDir, e.PlanMode)
+	slog.Info("[Engine] 唤醒会话 [" + session.ID + "]，锁定工作区: " + session.WorkDir + " (PlanMode: " + fmt.Sprintf("%v", e.PlanMode) + ")")
 
 	// 【埋点 1】：开启 Root Span，记录整个任务的生命周期
 	ctx, rootSpan := observability.StartSpan(ctx, "Agent.Run")
@@ -48,7 +48,7 @@ func (e *AgentEngine) Run(ctx context.Context, session *ctxpkg.Session, reporter
 	defer func() {
 		rootSpan.EndSpan()
 		_ = observability.ExportTraceToFile(rootSpan, session.WorkDir, session.ID)
-		log.Printf("📊 [Tracing] 本次任务的执行回放链路已保存至工作区的 .claw/traces 目录下\n")
+		slog.Info("📊 [Tracing] 本次任务的执行回放链路已保存至工作区的 .claw/traces 目录下")
 	}()
 
 	composer := ctxpkg.NewPromptComposer(session.WorkDir, e.PlanMode)
@@ -148,9 +148,12 @@ func (e *AgentEngine) Run(ctx context.Context, session *ctxpkg.Session, reporter
 					reporter.OnToolCall(ctx, call.Name, string(call.Arguments))
 				}
 
+				// 将 reporter 注入 context，供 BashTool 等长时间运行的工具发送进度
+				toolCtx := tools.SetProgressReporter(turnCtx, reporter)
+
 				// 此时，传给 Registry 的 ctx 是带有当前 Turn 的上下文。
 				// 并且由于是并发执行，多个工具的 Span 会平行地挂在 Turn 节点下！
-				result := e.registry.Execute(turnCtx, call)
+				result := e.registry.Execute(toolCtx, call)
 
 				finalOutput := result.Output
 				if result.IsError {

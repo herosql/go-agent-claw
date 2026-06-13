@@ -3,8 +3,9 @@ package feishu
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -37,6 +38,8 @@ func (m *ApprovalManager) WaitForApproval(taskID string, toolName string, args s
 
 	// 2. 通过 Reporter 向飞书发送请求信息
 	// (在实际的高级应用中，这里可以构建一张带有交互 Button 的精致飞书卡片)
+	// 将 args 中的 \n 字符串转换为真实换行，使审批消息更易读
+	args = strings.ReplaceAll(args, "\\n", "\n")
 	noticeMsg := fmt.Sprintf(`⚠️ **高危操作审批请求**
 Agent 试图执行以下动作:
 - 工具: %s
@@ -54,7 +57,7 @@ Agent 试图执行以下动作:
 		fmt.Printf("\n\033[31m[需要审批 TaskID: %s]\033[0m %s\n", taskID, noticeMsg)
 	}
 
-	log.Printf("[Approval] 已发送审批请求 (TaskID: %s)，协程挂起等待...\n", taskID)
+	slog.Info("[Approval] 已发送审批请求 (TaskID: " + taskID + ")，协程挂起等待...")
 
 	// 3. 【驾驭核心】：死死阻塞，等待飞书 Webhook 唤醒！
 	result := <-ch
@@ -74,10 +77,10 @@ func (m *ApprovalManager) ResolveApproval(taskID string, allowed bool, reason st
 	m.mu.RUnlock()
 
 	if exists {
-		log.Printf("[Approval] 收到来自飞书的审批结果 (TaskID: %s, Allowed: %v)\n", taskID, allowed)
+		slog.Info("[Approval] 收到来自飞书的审批结果 (TaskID: " + taskID + ", Allowed: " + fmt.Sprintf("%v", allowed) + ")")
 		ch <- ApprovalResult{Allowed: allowed, Reason: reason}
 	} else {
-		log.Printf("[Approval] 找不到对应的 TaskID: %s，可能已超时或处理完毕\n", taskID)
+		slog.Info("[Approval] 找不到对应的 TaskID: " + taskID + "，可能已超时或处理完毕")
 	}
 }
 
