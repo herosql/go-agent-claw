@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/herosql/go-agent-claw/internal/observability"
 	"github.com/herosql/go-agent-claw/internal/schema"
 )
 
@@ -67,9 +68,17 @@ func (r *registryImpl) GetAvailableTools() []schema.ToolDefinition {
 }
 
 func (r *registryImpl) Execute(ctx context.Context, call schema.ToolCall) schema.ToolResult {
+	// 【埋点 5】：开启工具执行的 Span
+	ctx, span := observability.StartSpan(ctx, "Tool.Execute")
+	span.AddAttribute("tool_name", call.Name)
+	span.AddAttribute("arguments", string(call.Arguments))
+
+	defer span.EndSpan()
+
 	// 1. 路由查找
 	tool, exists := r.tools[call.Name]
 	if !exists {
+		span.AddAttribute("error", fmt.Sprintf("tool '%s' not found", call.Name))
 		return schema.ToolResult{
 			ToolCallID: call.ID,
 			Output:     fmt.Sprintf("Error: 系统中不存在名为 '%s' 的工具。", call.Name),
@@ -82,6 +91,8 @@ func (r *registryImpl) Execute(ctx context.Context, call schema.ToolCall) schema
 		allowed, reason := mw(ctx, call)
 		if !allowed {
 			log.Printf("[Registry] ⚠️ 工具 %s 被 Middleware 拦截: %s\n", call.Name, reason)
+			span.AddAttribute("intercepted", true)
+			span.AddAttribute("reject_reason", reason)
 			return schema.ToolResult{
 				ToolCallID: call.ID,
 				Output:     fmt.Sprintf("执行被系统拦截。原因: %s", reason),
@@ -93,6 +104,7 @@ func (r *registryImpl) Execute(ctx context.Context, call schema.ToolCall) schema
 	// 3. 执行工具逻辑
 	output, err := tool.Execute(ctx, call.Arguments)
 	if err != nil {
+		span.AddAttribute("error", err.Error())
 		return schema.ToolResult{
 			ToolCallID: call.ID,
 			Output:     fmt.Sprintf("Error executing %s: %v", call.Name, err),
@@ -100,9 +112,19 @@ func (r *registryImpl) Execute(ctx context.Context, call schema.ToolCall) schema
 		}
 	}
 
+	// 只截取输出的前 100 字符放入 Trace，防止 Trace 文件过度膨胀
+	span.AddAttribute("output_preview", truncate(output, 100))
+
 	return schema.ToolResult{
 		ToolCallID: call.ID,
 		Output:     output,
 		IsError:    false,
 	}
+}
+
+func truncate(s string, max int) string {
+	if len(s) > max {
+		return s[:max] + "..."
+	}
+	return s
 }
