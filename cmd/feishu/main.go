@@ -1,9 +1,9 @@
-// cmd/fei/main.go
+// cmd/feishu/main.go
 package main
 
 import (
-	"context"
 	"log"
+	"net/http"
 	"os"
 
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
@@ -11,8 +11,7 @@ import (
 	"github.com/herosql/go-agent-claw/internal/feishu"
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/tools"
-	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
-	larkws "github.com/larksuite/oapi-sdk-go/v3/ws"
+	"github.com/larksuite/oapi-sdk-go/v3/core/httpserverext"
 )
 
 func main() {
@@ -21,19 +20,13 @@ func main() {
 		log.Fatal("请先导出 ZHIPU_API_KEY 环境变量")
 	}
 
-	appID := os.Getenv("FEISHU_APP_ID")
-	appSecret := os.Getenv("FEISHU_APP_SECRET")
-	if appID == "" || appSecret == "" {
-		log.Fatal("请设置 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
-	}
-
 	// 2. 初始化工作区
 	workDir, _ := os.Getwd()
 	workDir += "/workspace"
 
 	// 3. 初始化 LLM Provider
 	modelName := "glm-4.5-air"
-	realProvider := provider.NewZhipuOpenAIProvider(modelName)
+	llmProvider := provider.NewZhipuOpenAIProvider(modelName)
 
 	// 4. 初始化工具注册表
 	registry := tools.NewRegistry()
@@ -45,27 +38,25 @@ func main() {
 	// 5. 初始化会话
 	sess := ctxpkg.GlobalSessionMgr.GetOrCreate("feishu_default", workDir)
 
-	// 6. 初始化引擎（关闭 Thinking 加速响应）
-	eng := engine.NewAgentEngine(realProvider, registry, false, false)
+	// 6. 初始化引擎（开启 EnableThinking 慢思考）
+	eng := engine.NewAgentEngine(llmProvider, registry, false, true)
 
 	// 7. 初始化飞书 Bot 调度器
 	bot := feishu.NewFeishuBot(eng, sess)
+	handler := httpserverext.NewEventHandlerFunc(bot.GetEventDispatcher())
 
-	// 8. 创建 WebSocket 客户端
-	wsClient := larkws.NewClient(appID, appSecret,
-		larkws.WithEventHandler(bot.GetEventDispatcher()),
-		larkws.WithLogLevel(larkcore.LogLevelInfo),
-		larkws.WithAutoReconnect(true),
-	)
+	// 7. 注册路由并启动 HTTP 服务
+	http.HandleFunc("/webhook/event", handler)
 
+	port := ":48080"
 	log.Println("==================================================")
 	log.Printf("🚀 go-agent-claw 飞书服务端已启动\n")
 	log.Printf("📁 工作区: %s\n", workDir)
 	log.Printf("🤖 模型: %s\n", modelName)
+	log.Printf("🌐 监听端口: %s\n", port)
 	log.Println("==================================================")
 
-	// 8. 启动 WebSocket 长连接
-	err := wsClient.Start(context.Background())
+	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		log.Fatalf("服务器启动失败: %v", err)
 	}
