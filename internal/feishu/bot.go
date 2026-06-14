@@ -9,12 +9,13 @@ import (
 	"os"
 	"strings"
 
-	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
-	"github.com/herosql/go-agent-claw/internal/engine"
-	"github.com/herosql/go-agent-claw/internal/schema"
 	lark "github.com/larksuite/oapi-sdk-go/v3"
 	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
+
+	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
+	"github.com/herosql/go-agent-claw/internal/engine"
+	"github.com/herosql/go-agent-claw/internal/schema"
 )
 
 // ==========================================
@@ -46,10 +47,10 @@ type AgentEngineFactory func(session *ctxpkg.Session) *engine.AgentEngine
 
 type FeishuBot struct {
 	client    *lark.Client
+	factory   AgentEngineFactory
 	appID     string
 	appSecret string
-	workDir   string             // 保存从入口传来的工作区路径
-	factory   AgentEngineFactory // 替换掉原来的单一 engine 引用
+	workDir   string
 }
 
 func NewFeishuBotWithFactory(factory AgentEngineFactory, workDir string) *FeishuBot {
@@ -190,11 +191,8 @@ func (r *FeishuReporter) sendMsg(text string) {
 			Build()).
 		Build()
 
-	_, err = r.client.Im.Message.Create(context.Background(), msgReq)
-	if err != nil {
-		// 消息发送失败不影响主流程，仅记录日志
-		fmt.Printf("警告: 飞书消息发送失败: %v\n", err)
-	}
+	//nolint:errcheck // 消息发送失败不影响主流程
+	_, _ = r.client.Im.Message.Create(context.Background(), msgReq)
 }
 
 func (r *FeishuReporter) OnThinking(ctx context.Context) {

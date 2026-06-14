@@ -11,15 +11,14 @@ import (
 
 // ApprovalResult 审批结果包
 type ApprovalResult struct {
-	Allowed bool
 	Reason  string
+	Allowed bool
 }
 
 // ApprovalManager 统一管理当前正在等待人类审批的任务
 type ApprovalManager struct {
-	mu sync.RWMutex
-	// Key 是用于审批的唯一 TaskID，Value 是接收审批结果的 Channel
 	pendingTasks map[string]chan ApprovalResult
+	mu           sync.RWMutex
 }
 
 // 全局单例，方便在 Registry Middleware 和 Feishu Webhook 之间共享状态
@@ -101,13 +100,13 @@ func IsDangerousCommand(toolName string, args string) bool {
 	if toolName == "bash" {
 		// 危险指令特征库 (模拟真实的运维黑名单)
 		dangerousPatterns := []string{
-			`rm\s+-r`,          // 级联删除
-			`sudo\s+`,          // 提权操作
-			`drop\s+`,          // 数据库危险命令
-			`>.*\.go`,          // 恶意覆盖源代码
-			`nginx\s+-s`,       // 【针对第 22 讲剧本】：拦截 Nginx 服务重启或停止
-			`systemctl\s+`,     // 拦截系统级服务管理
-			`kill\s+`,          // 拦截杀进程操作
+			`rm\s+-r`,      // 级联删除
+			`sudo\s+`,      // 提权操作
+			`drop\s+`,      // 数据库危险命令
+			`>.*\.go`,      // 恶意覆盖源代码
+			`nginx\s+-s`,   // 【针对第 22 讲剧本】：拦截 Nginx 服务重启或停止
+			`systemctl\s+`, // 拦截系统级服务管理
+			`kill\s+`,      // 拦截杀进程操作
 		}
 
 		for _, p := range dangerousPatterns {

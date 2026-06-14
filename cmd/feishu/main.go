@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/larksuite/oapi-sdk-go/v3/core/httpserverext"
+
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
 	"github.com/herosql/go-agent-claw/internal/engine"
 	"github.com/herosql/go-agent-claw/internal/feishu"
 	"github.com/herosql/go-agent-claw/internal/loginit"
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/tools"
-	"github.com/larksuite/oapi-sdk-go/v3/core/httpserverext"
 )
 
 func main() {

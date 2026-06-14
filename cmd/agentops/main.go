@@ -6,6 +6,9 @@ import (
 	"log/slog"
 	"os"
 
+	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
+	larkws "github.com/larksuite/oapi-sdk-go/v3/ws"
+
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
 	"github.com/herosql/go-agent-claw/internal/engine"
 	"github.com/herosql/go-agent-claw/internal/feishu"
@@ -14,8 +17,6 @@ import (
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/schema"
 	"github.com/herosql/go-agent-claw/internal/tools"
-	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
-	larkws "github.com/larksuite/oapi-sdk-go/v3/ws"
 )
 
 func main() {
@@ -59,10 +60,15 @@ func main() {
 			slog.Info("[Middleware] 拦截到高危操作: " + call.Name + "，触发飞书审批挂起...")
 
 			// 【驾驭魔术】：从 Context 中优雅地取出专属于发起该请求群聊的 Reporter！
-			currentReporter, _ := feishu.ReporterFromContext(ctx).(*feishu.FeishuReporter)
+			var feishuReporter *feishu.FeishuReporter
+			if r := feishu.ReporterFromContext(ctx); r != nil {
+				if fr, ok := r.(*feishu.FeishuReporter); ok {
+					feishuReporter = fr
+				}
+			}
 
 			// 当前 Goroutine 死死挂起，向飞书发送卡片，等待人类决定
-			allowed, reason := feishu.GlobalApprovalMgr.WaitForApproval(taskID, call.Name, argsStr, currentReporter)
+			allowed, reason := feishu.GlobalApprovalMgr.WaitForApproval(taskID, call.Name, argsStr, feishuReporter)
 
 			if !allowed {
 				return false, reason // 拒绝，将理由作为 ToolResult 喂回给大模型

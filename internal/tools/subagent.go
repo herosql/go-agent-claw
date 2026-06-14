@@ -77,7 +77,7 @@ func (t *SubagentTool) Execute(ctx context.Context, args json.RawMessage) (strin
 	summary, err := t.runner.RunSub(ctx, input.TaskPrompt, t.readOnlyRegistry, t.reporter)
 
 	if err != nil {
-		return fmt.Errorf("子智能体执行失败: %v", err).Error(), nil
+		return fmt.Errorf("子智能体执行失败: %w", err).Error(), nil
 	}
 
 	slog.Info("[Subagent] ✅ 子智能体任务结束。报告返回给主干...")

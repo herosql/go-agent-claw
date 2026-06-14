@@ -12,7 +12,7 @@ import (
 	"github.com/herosql/go-agent-claw/internal/schema"
 )
 
-func formatInt(n int) string  { return strconv.Itoa(n) }
+func formatInt(n int) string      { return strconv.Itoa(n) }
 func formatCost(f float64) string { return strconv.FormatFloat(f, 'f', 6, 64) }
 
 // PricingModel 定义了不同大模型的计费标准 (单位: 美元/1M Tokens)
@@ -27,8 +27,8 @@ var PricingModel = map[string]struct {
 // CostTracker 是一个包装了真实 LLMProvider 的装饰器中间件
 type CostTracker struct {
 	nextProvider provider.LLMProvider
+	session      *ctxpkg.Session
 	modelName    string
-	session      *ctxpkg.Session // 当前所属的会话 (用于累加总成本)
 }
 
 // NewCostTracker 构造函数：接收一个现有的 Provider，返回一个被监控的 Provider

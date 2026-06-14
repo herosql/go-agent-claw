@@ -16,14 +16,13 @@ type traceKey struct{}
 
 // Span 代表链路追踪中的一个时间跨度和操作节点
 type Span struct {
-	Name       string                 `json:"name"`
 	StartTime  time.Time              `json:"start_time"`
 	EndTime    time.Time              `json:"end_time"`
+	Attributes map[string]interface{} `json:"attributes,omitempty"`
+	Name       string                 `json:"name"`
+	Children   []*Span                `json:"children,omitempty"`
 	DurationMs int64                  `json:"duration_ms"`
-	Attributes map[string]interface{} `json:"attributes,omitempty"` // 存放元数据 (如消耗的 Token, 执行的命令)
-	Children   []*Span                `json:"children,omitempty"`   // 子跨度
-
-	mu sync.Mutex // 保护 Children 的并发写入
+	mu         sync.Mutex
 }
 
 // StartSpan 开启一个新的追踪跨度，并将其级联到 Context 中

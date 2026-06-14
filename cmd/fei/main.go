@@ -6,14 +6,15 @@ import (
 	"log/slog"
 	"os"
 
+	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
+	larkws "github.com/larksuite/oapi-sdk-go/v3/ws"
+
 	ctxpkg "github.com/herosql/go-agent-claw/internal/context"
 	"github.com/herosql/go-agent-claw/internal/engine"
 	"github.com/herosql/go-agent-claw/internal/feishu"
 	"github.com/herosql/go-agent-claw/internal/loginit"
 	"github.com/herosql/go-agent-claw/internal/provider"
 	"github.com/herosql/go-agent-claw/internal/tools"
-	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
-	larkws "github.com/larksuite/oapi-sdk-go/v3/ws"
 )
 
 func main() {

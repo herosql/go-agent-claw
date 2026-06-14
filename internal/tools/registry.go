@@ -60,7 +60,7 @@ func (r *registryImpl) Use(mw MiddlewareFunc) {
 }
 
 func (r *registryImpl) GetAvailableTools() []schema.ToolDefinition {
-	var defs []schema.ToolDefinition
+	defs := make([]schema.ToolDefinition, 0, len(r.tools))
 	for _, tool := range r.tools {
 		defs = append(defs, tool.Definition())
 	}

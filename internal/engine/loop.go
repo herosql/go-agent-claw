@@ -17,11 +17,11 @@ import (
 type AgentEngine struct {
 	provider       provider.LLMProvider
 	registry       tools.Registry
-	EnableThinking bool
-	PlanMode       bool
 	compactor      *ctxpkg.Compactor
 	recovery       *ctxpkg.RecoveryManager
-	injector       *ReminderInjector // 【新增】提醒注入器
+	injector       *ReminderInjector
+	EnableThinking bool
+	PlanMode       bool
 }
 
 func NewAgentEngine(p provider.LLMProvider, r tools.Registry, enableThinking bool, planMode bool) *AgentEngine {

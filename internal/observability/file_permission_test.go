@@ -62,8 +62,8 @@ func TestTraceDir_Permissions(t *testing.T) {
 		EndTime:    time.Now(),
 		Attributes: map[string]interface{}{},
 	}
-	ExportTraceToFile(rootSpan, tmpDir, "s1")
-	ExportTraceToFile(rootSpan, tmpDir, "s2")
+	_ = ExportTraceToFile(rootSpan, tmpDir, "s1")
+	_ = ExportTraceToFile(rootSpan, tmpDir, "s2")
 
 	traceDir := filepath.Join(tmpDir, ".claw", "traces")
 	info, err := os.Stat(traceDir)

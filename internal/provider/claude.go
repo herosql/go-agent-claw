@@ -8,12 +8,13 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
+
 	"github.com/herosql/go-agent-claw/internal/schema"
 )
 
 type ClaudeProvider struct {
-	client anthropic.Client
 	model  string
+	client anthropic.Client
 }
 
 func NewZhipuClaudeProvider(model string) *ClaudeProvider {
@@ -70,7 +71,7 @@ func (p *ClaudeProvider) Generate(ctx context.Context, msgs []schema.Message, av
 		}
 	}
 
-	var anthropicTools []anthropic.ToolUnionParam
+	anthropicTools := make([]anthropic.ToolUnionParam, 0, len(availableTools))
 	for _, toolDef := range availableTools {
 		// ToolInputSchemaParam 是结构体，需要通过 Properties 字段填充
 		// InputSchema 里的 "properties" 值取出来赋给它

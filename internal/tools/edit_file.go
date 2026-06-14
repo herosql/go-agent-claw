@@ -109,7 +109,7 @@ func fuzzyReplace(originalContent, oldText, newText string) (string, error) {
 	idx := strings.Index(originalContent, oldText)
 	if idx >= 0 {
 		// 检查是否唯一：查找 idx 之后是否还有匹配
-		if strings.Index(originalContent[idx+len(oldText):], oldText) >= 0 {
+		if strings.Contains(originalContent[idx+len(oldText):], oldText) {
 			return "", fmt.Errorf("old_text 匹配到了多处，请提供更多的上下文代码以确保唯一性")
 		}
 		return replaceAt(originalContent, idx, idx+len(oldText), newText), nil
@@ -121,7 +121,7 @@ func fuzzyReplace(originalContent, oldText, newText string) (string, error) {
 
 	idx = strings.Index(normalizedContent, normalizedOld)
 	if idx >= 0 {
-		if strings.Index(normalizedContent[idx+len(normalizedOld):], normalizedOld) >= 0 {
+		if strings.Contains(normalizedContent[idx+len(normalizedOld):], normalizedOld) {
 			return "", fmt.Errorf("old_text 匹配到了多处，请提供更多的上下文代码以确保唯一性")
 		}
 		return replaceAt(originalContent, idx, idx+len(normalizedOld), newText), nil
@@ -132,7 +132,7 @@ func fuzzyReplace(originalContent, oldText, newText string) (string, error) {
 	if trimmedOld != "" {
 		idx = strings.Index(normalizedContent, trimmedOld)
 		if idx >= 0 {
-			if strings.Index(normalizedContent[idx+len(trimmedOld):], trimmedOld) >= 0 {
+			if strings.Contains(normalizedContent[idx+len(trimmedOld):], trimmedOld) {
 				return "", fmt.Errorf("old_text 匹配到了多处，请提供更多的上下文代码以确保唯一性")
 			}
 			// L3 替换时，必须在原始 normalizedContent 中找到实际位置进行替换，

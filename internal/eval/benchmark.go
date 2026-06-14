@@ -31,10 +31,10 @@ type TestCase struct {
 // TestResult 存放单次跑分结果
 type TestResult struct {
 	TestCaseID   string
-	Passed       bool
+	ErrorMsg     string
 	TotalCostCNY float64
 	DurationMs   int64
-	ErrorMsg     string
+	Passed       bool
 }
 
 // internal/eval/benchmark.go (续)
@@ -53,7 +53,7 @@ func (b *BenchmarkRunner) RunSuite(ctx context.Context, testcases []TestCase) {
 	slog.Info("🚀 启动自动化 Harness Benchmark 评估... | 模型: " + b.modelName)
 	slog.Info("==================================================")
 
-	var results []TestResult
+	results := make([]TestResult, 0, len(testcases))
 	passedCount := 0
 	totalCost := 0.0
 
@@ -61,6 +61,7 @@ func (b *BenchmarkRunner) RunSuite(ctx context.Context, testcases []TestCase) {
 		slog.Info(">>> ⏳ 正在执行用例 [" + tc.ID + "]: " + tc.Name)
 
 		res := b.runSingleTest(ctx, tc)
+		//nolint:staticcheck // results slice is used only for accumulation, not returned
 		results = append(results, res)
 
 		if res.Passed {

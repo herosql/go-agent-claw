@@ -6,15 +6,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/herosql/go-agent-claw/internal/schema"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/shared"
+
+	"github.com/herosql/go-agent-claw/internal/schema"
 )
 
 type OpenAIProvider struct {
-	client openai.Client
 	model  string
+	client openai.Client
 }
 
 func NewZhipuOpenAIProvider(model string) *OpenAIProvider {
@@ -75,7 +76,7 @@ func (p *OpenAIProvider) Generate(ctx context.Context, msgs []schema.Message, av
 	}
 
 	// v3 新 API：ChatCompletionToolUnionParam + ChatCompletionFunctionTool()
-	var openaiTools []openai.ChatCompletionToolUnionParam
+	openaiTools := make([]openai.ChatCompletionToolUnionParam, 0, len(availableTools))
 	for _, toolDef := range availableTools {
 		var params shared.FunctionParameters
 		if m, ok := toolDef.InputSchema.(map[string]interface{}); ok {

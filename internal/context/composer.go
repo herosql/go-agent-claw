@@ -11,9 +11,9 @@ import (
 
 // PromptComposer 负责动态生成 System Prompt
 type PromptComposer struct {
-	workDir     string
-	planMode    bool // 【新增】计划模式开关
 	skillLoader *SkillLoader
+	workDir     string
+	planMode    bool
 }
 
 func NewPromptComposer(workDir string, planMode bool) *PromptComposer {

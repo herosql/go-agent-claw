@@ -19,16 +19,11 @@ const (
 
 // Message 代表上下文中传递的单条消息
 type Message struct {
-	// 如果这是大模型 (Assistant) 的回复，此字段存放本次调用的 Token 消耗
-	Usage *Usage `json:"usage,omitempty"`
-
-	// 如果模型决定调用工具，此字段将被填充 (支持并行调用多个工具)
-	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
-
-	Role    Role   `json:"role"`
-	Content string `json:"content"` // 存放纯文本内容
-	// 如果这是对某个工具调用的响应，此字段必须填写，以告知模型上下文的关联性
-	ToolCallID string `json:"tool_call_id,omitempty"`
+	Usage      *Usage     `json:"usage,omitempty"`
+	Role       Role       `json:"role"`
+	Content    string     `json:"content"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 }
 
 // ToolCall 代表模型请求调用某个具体的工具
@@ -48,7 +43,7 @@ type ToolResult struct {
 
 // ToolDefinition 描述了一个大模型可以调用的工具元信息 (供模型理解工具有什么用)
 type ToolDefinition struct {
+	InputSchema interface{} `json:"input_schema"`
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
-	InputSchema interface{} `json:"input_schema"` // 对应 JSON Schema
 }

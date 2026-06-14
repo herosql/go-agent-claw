@@ -10,19 +10,15 @@ import (
 
 // Session 代表了一次持续的人机交互过程。它负责维护该会话的完整历史。
 type Session struct {
-	ID        string
-	WorkDir   string // 该会话绑定的物理工作区
-	CreatedAt time.Time
-	UpdatedAt time.Time
-
-	// 【新增】用于统计该 Session 累计消耗的资源
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	ID                    string
+	WorkDir               string
+	history               []schema.Message
 	TotalPromptTokens     int
 	TotalCompletionTokens int
 	TotalCostCNY          float64
-
-	// 存放此 Session 中所有的用户输入、大模型回复和工具调用结果
-	history []schema.Message
-	mu      sync.RWMutex // 读写锁，防止并发读写历史时发生 Data Race
+	mu                    sync.RWMutex
 }
 
 // RecordUsage 供外部 Tracker 调用，用于累加账单

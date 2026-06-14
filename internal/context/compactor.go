@@ -34,8 +34,8 @@ func (c *Compactor) Compact(msgs []schema.Message) []schema.Message {
 
 	slog.Info("[Compactor] ⚠️ 内存告警：当前上下文长度 (" + strconv.Itoa(currentLength) + " 字符) 超过阈值 (" + strconv.Itoa(c.MaxChars) + ")，触发压缩清理...")
 
-	var compacted []schema.Message
 	msgCount := len(msgs)
+	compacted := make([]schema.Message, 0, msgCount)
 
 	// 计算受保护的 Working Memory 起始索引
 	protectStartIndex := msgCount - c.RetainLastMsgs
