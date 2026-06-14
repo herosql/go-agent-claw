@@ -175,7 +175,10 @@ func (r *FeishuReporter) sendMsg(text string) {
 	textContent := map[string]string{
 		"text": text,
 	}
-	contentBytes, _ := json.Marshal(textContent)
+	contentBytes, err := json.Marshal(textContent)
+	if err != nil {
+		return
+	}
 	contentStr := string(contentBytes)
 
 	msgReq := larkim.NewCreateMessageReqBuilder().
@@ -187,7 +190,11 @@ func (r *FeishuReporter) sendMsg(text string) {
 			Build()).
 		Build()
 
-	_, _ = r.client.Im.Message.Create(context.Background(), msgReq)
+	_, err = r.client.Im.Message.Create(context.Background(), msgReq)
+	if err != nil {
+		// 消息发送失败不影响主流程，仅记录日志
+		fmt.Printf("警告: 飞书消息发送失败: %v\n", err)
+	}
 }
 
 func (r *FeishuReporter) OnThinking(ctx context.Context) {

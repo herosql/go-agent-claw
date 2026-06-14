@@ -111,7 +111,7 @@ func IsDangerousCommand(toolName string, args string) bool {
 		}
 
 		for _, p := range dangerousPatterns {
-			if matched, _ := regexp.MatchString(p, args); matched {
+			if matched, err := regexp.MatchString(p, args); err == nil && matched {
 				return true // 命中任何一条黑名单，必须挂起审批
 			}
 		}

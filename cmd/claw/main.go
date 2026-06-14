@@ -89,7 +89,7 @@ func main() {
 	// 6. 发起冲锋：启动 Main Loop！
 	err = eng.Run(ctx, sess, reporter)
 	if err != nil {
-			slog.Error("💥 引擎运行崩溃", "err", err)
+		slog.Error("💥 引擎运行崩溃", "err", err)
 		os.Exit(1)
 	}
 

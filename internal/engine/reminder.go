@@ -2,7 +2,7 @@
 package engine
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
@@ -25,7 +25,7 @@ func NewReminderInjector() *ReminderInjector {
 
 // generateFingerprint 生成工具调用的唯一指纹，用于判断大模型是否在重复相同的动作
 func generateFingerprint(toolName string, args []byte) string {
-	hasher := md5.New()
+	hasher := sha256.New()
 	hasher.Write([]byte(toolName))
 	hasher.Write(args)
 	return hex.EncodeToString(hasher.Sum(nil))

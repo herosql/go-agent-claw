@@ -53,7 +53,9 @@ func (p *ClaudeProvider) Generate(ctx context.Context, msgs []schema.Message, av
 			for _, tc := range msg.ToolCalls {
 				// 新版 SDK：手动构造 ToolUse block
 				var inputMap map[string]interface{}
-				_ = json.Unmarshal(tc.Arguments, &inputMap)
+				if err := json.Unmarshal(tc.Arguments, &inputMap); err != nil {
+					inputMap = map[string]interface{}{}
+				}
 				blocks = append(blocks, anthropic.ContentBlockParamUnion{
 					OfToolUse: &anthropic.ToolUseBlockParam{
 						ID:    tc.ID,
@@ -125,7 +127,10 @@ func (p *ClaudeProvider) Generate(ctx context.Context, msgs []schema.Message, av
 		case "text":
 			resultMsg.Content += block.Text
 		case "tool_use":
-			argsBytes, _ := json.Marshal(block.Input)
+			argsBytes, err := json.Marshal(block.Input)
+			if err != nil {
+				continue // 跳过无法序列化的工具调用
+			}
 			resultMsg.ToolCalls = append(resultMsg.ToolCalls, schema.ToolCall{
 				ID:        block.ID,
 				Name:      block.Name,

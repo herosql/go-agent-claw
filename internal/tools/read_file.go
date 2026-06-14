@@ -57,8 +57,18 @@ func (t *ReadFileTool) Execute(ctx context.Context, args json.RawMessage) (strin
 		return "", fmt.Errorf("参数解析失败: %w", err)
 	}
 
-	// 2. 拼接绝对路径 (注意：生产环境中需要做路径穿越检测防范，防止 ../../etc/passwd)
+	// 【安全防线】检查用户路径是否为绝对路径或包含穿越
+	if err := isUserPathSafe(input.Path); err != nil {
+		return "", err
+	}
+
+	// 2. 拼接绝对路径
 	fullPath := filepath.Join(t.workDir, input.Path)
+
+	// 【安全防线】验证最终路径在工作区内
+	if err := isPathSafe(fullPath, t.workDir); err != nil {
+		return "", err
+	}
 
 	// 3. 执行物理 IO 操作
 	// 使用 os.ReadFile 替代 os.Open + io.ReadAll + defer Close，

@@ -83,15 +83,20 @@ func (b *BenchmarkRunner) runSingleTest(ctx context.Context, tc TestCase) TestRe
 	startTime := time.Now()
 
 	// 1. 为每个用例创建一个绝对干净的沙箱目录 (物理隔离)
-	workDir, _ := os.Getwd()
+	workDir, err := os.Getwd()
+	if err != nil {
+		return TestResult{TestCaseID: tc.ID, Passed: false, ErrorMsg: "获取工作目录失败"}
+	}
 	workDir += fmt.Sprintf("/workspace/%s_%d", tc.ID, time.Now().Unix())
-	_ = os.MkdirAll(workDir, 0755)
+	if err = os.MkdirAll(workDir, 0755); err != nil {
+		return TestResult{TestCaseID: tc.ID, Passed: false, ErrorMsg: "创建工作目录失败"}
+	}
 
 	// 2. (可选) 执行 Setup 脚本准备靶机代码
 	if tc.SetupScript != "" {
 		cmd := exec.Command("bash", "-c", tc.SetupScript)
 		cmd.Dir = workDir
-		if err := cmd.Run(); err != nil {
+		if err = cmd.Run(); err != nil {
 			return TestResult{TestCaseID: tc.ID, Passed: false, ErrorMsg: "靶机 Setup 失败"}
 		}
 	}
@@ -112,7 +117,7 @@ func (b *BenchmarkRunner) runSingleTest(ctx context.Context, tc TestCase) TestRe
 	// 4. 让 Agent 开始干活
 	session.Append(schema.Message{Role: schema.RoleUser, Content: tc.TaskPrompt})
 	// 我们传入一个空的 reporter 屏蔽普通日志，防止刷屏
-	err := eng.Run(ctx, session, nil)
+	err = eng.Run(ctx, session, nil)
 
 	if err != nil {
 		return TestResult{TestCaseID: tc.ID, Passed: false, ErrorMsg: fmt.Sprintf("Agent 崩溃: %v", err)}

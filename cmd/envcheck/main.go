@@ -42,6 +42,9 @@ func main() {
 }
 
 func getCWD() string {
-	cwd, _ := os.Getwd()
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
 	return cwd
 }

@@ -58,6 +58,12 @@
 
 ---
 
+## 第八条：提交信息准则
+**核心：** commit 消息必须遵循规范，禁止包含工具标志。
+- 8.1：禁止在 commit 消息中出现 `Claude`、`claude`、`@anthropic`、`Co-Authored-By` 等 LLM/Agent 工具标志
+- 8.2：消息格式遵循 `type: 中文描述`，type 仅限 `feat`/`fix`/`docs`/`refactor`/`test`/`ci`/`chore`
+- 8.3：提交前需确认 commit 消息符合规范
+
 ## 治理规则 (Governance)
 本宪法具有**最高法律效力**，效力高于 `AGENTS.md`、`CLAUDE.md` 及任何单次会话指令。
 所有开发计划、代码实现必须先通过**合宪性审查**，方可执行。

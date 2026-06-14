@@ -33,7 +33,11 @@ func main() {
 	}
 
 	// 2. 初始化工作区
-	workDir, _ := os.Getwd()
+	workDir, err := os.Getwd()
+	if err != nil {
+		slog.Error("获取工作目录失败", "err", err)
+		os.Exit(1)
+	}
 	workDir += "/workspace"
 
 	// 3. 初始化 LLM Provider
@@ -70,7 +74,7 @@ func main() {
 	slog.Info("==================================================")
 
 	// 8. 启动 WebSocket 长连接
-	err := wsClient.Start(context.Background())
+	err = wsClient.Start(context.Background())
 	if err != nil {
 		slog.Error("服务器启动失败", "err", err)
 		os.Exit(1)

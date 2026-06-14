@@ -59,12 +59,12 @@ func (t *WriteFileTool) Execute(ctx context.Context, args json.RawMessage) (stri
 	fullPath := filepath.Join(t.workDir, input.Path)
 
 	// 自动创建缺失的父级目录
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0750); err != nil {
 		return "", fmt.Errorf("创建父目录失败: %w", err)
 	}
 
-	// 写入文件内容，权限设为 0644
-	err := os.WriteFile(fullPath, []byte(input.Content), 0644)
+	// 写入文件内容，权限设为 0600（仅所有者可读写）
+	err := os.WriteFile(fullPath, []byte(input.Content), 0600)
 	if err != nil {
 		return "", fmt.Errorf("写入文件失败: %w", err)
 	}

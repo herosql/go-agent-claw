@@ -55,7 +55,9 @@ type progressKey struct{}
 // reporterFromContext extracts a progressReporter from context, if present.
 func reporterFromContext(ctx context.Context) progressReporter {
 	if r := ctx.Value(progressKey{}); r != nil {
-		return r.(progressReporter)
+		if reporter, ok := r.(progressReporter); ok {
+			return reporter
+		}
 	}
 	return nil
 }

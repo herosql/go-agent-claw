@@ -47,7 +47,9 @@ func (e *AgentEngine) Run(ctx context.Context, session *ctxpkg.Session, reporter
 	// defer 保证在引擎退出时，无论成功失败，都能结束根 Span 并导出 Trace 报告
 	defer func() {
 		rootSpan.EndSpan()
-		_ = observability.ExportTraceToFile(rootSpan, session.WorkDir, session.ID)
+		if err := observability.ExportTraceToFile(rootSpan, session.WorkDir, session.ID); err != nil {
+			slog.Warn("警告: 追踪文件导出失败", "err", err)
+		}
 		slog.Info("📊 [Tracing] 本次任务的执行回放链路已保存至工作区的 .claw/traces 目录下")
 	}()
 
@@ -259,8 +261,10 @@ func (e *AgentEngine) RunSub(ctx context.Context, taskPrompt string, readOnlyReg
 				// 【可视化的关键】：让终端用户看到 Subagent 正在干嘛
 				var r Reporter
 				if reporter != nil {
-					r = reporter.(Reporter)
-					r.OnToolCall(ctx, fmt.Sprintf("[Subagent] %s", call.Name), string(call.Arguments))
+					if ri, ok := reporter.(Reporter); ok {
+						r = ri
+						r.OnToolCall(ctx, fmt.Sprintf("[Subagent] %s", call.Name), string(call.Arguments))
+					}
 				}
 
 				result := readOnlyRegistry.Execute(ctx, call)
@@ -270,7 +274,7 @@ func (e *AgentEngine) RunSub(ctx context.Context, taskPrompt string, readOnlyReg
 					finalOutput = e.recovery.AnalyzeAndInject(call.Name, result.Output)
 				}
 
-				if reporter != nil {
+				if r != nil {
 					display := finalOutput
 					if len(display) > 200 {
 						display = display[:200] + "... (已截断)"

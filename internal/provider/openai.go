@@ -81,8 +81,13 @@ func (p *OpenAIProvider) Generate(ctx context.Context, msgs []schema.Message, av
 		if m, ok := toolDef.InputSchema.(map[string]interface{}); ok {
 			params = shared.FunctionParameters(m)
 		} else {
-			b, _ := json.Marshal(toolDef.InputSchema)
-			_ = json.Unmarshal(b, &params)
+			b, err := json.Marshal(toolDef.InputSchema)
+			if err != nil {
+				continue // 跳过无法序列化的工具定义
+			}
+			if err := json.Unmarshal(b, &params); err != nil {
+				continue
+			}
 		}
 
 		openaiTools = append(openaiTools, openai.ChatCompletionFunctionTool(

@@ -28,9 +28,13 @@ func main() {
 	}
 
 	// 1. 设定监控的物理工作区
-	workDir, _ := os.Getwd()
+	workDir, err := os.Getwd()
+	if err != nil {
+		slog.Error("获取工作目录失败", "err", err)
+		os.Exit(1)
+	}
 	workDir += "/workspace"
-	if err := os.MkdirAll(workDir, 0755); err != nil {
+	if err = os.MkdirAll(workDir, 0755); err != nil {
 		slog.Error("无法创建工作区", "err", err)
 		os.Exit(1)
 	}
@@ -100,7 +104,7 @@ func main() {
 	slog.Info("==================================================")
 
 	// 7. 启动 WebSocket 长连接
-	err := wsClient.Start(context.Background())
+	err = wsClient.Start(context.Background())
 	if err != nil {
 		slog.Error("服务器启动失败", "err", err)
 		os.Exit(1)
