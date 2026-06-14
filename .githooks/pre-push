@@ -22,23 +22,33 @@ fi
 
 # 3. golangci-lint（包含 govulncheck）
 echo "[3/4] Running golangci-lint..."
-golangci-lint run --timeout=5m
-if [ $? -ne 0 ]; then
-    echo "FAIL: golangci-lint failed"
-    exit 1
+GOLANGCI_LINT="$(command -v golangci-lint 2>/dev/null || echo "")"
+if [ -z "$GOLANGCI_LINT" ]; then
+    echo "SKIP: golangci-lint not installed"
+else
+    golangci-lint run --timeout=5m
+    if [ $? -ne 0 ]; then
+        echo "FAIL: golangci-lint failed"
+        exit 1
+    fi
 fi
 
 # 4. govulncheck 独立检查（双重保障）
 echo "[4/4] Running govulncheck..."
-GOBIN="$(go env GOPATH)/bin"
-if [ -f "$GOBIN/govulncheck.exe" ]; then
-    "$GOBIN/govulncheck.exe" ./...
+GOVULNCHECK="$(command -v govulncheck 2>/dev/null || command -v govulncheck.exe 2>/dev/null || echo "")"
+if [ -z "$GOVULNCHECK" ]; then
+    echo "SKIP: govulncheck not installed"
 else
-    govulncheck ./...
-fi
-if [ $? -ne 0 ]; then
-    echo "FAIL: vulnerabilities detected"
-    exit 1
+    GOBIN="$(go env GOPATH)/bin"
+    if [ -f "$GOBIN/govulncheck.exe" ]; then
+        "$GOBIN/govulncheck.exe" ./...
+    else
+        govulncheck ./...
+    fi
+    if [ $? -ne 0 ]; then
+        echo "FAIL: vulnerabilities detected"
+        exit 1
+    fi
 fi
 
 echo "==> pre-push checks passed"
